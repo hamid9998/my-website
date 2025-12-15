@@ -1,30 +1,21 @@
-# Builder stage: install production dependencies
-FROM node:18-alpine AS builder
+# Dockerfile
+FROM node:18-alpine
+
+# Create app directory
 WORKDIR /app
 
-# Install production dependencies (use package-lock if present)
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm ci --only=production
 
-# Copy application files
+# Install dependencies
+RUN npm cache clean --force && \
+    npm install --production
+
+# Copy app source code
 COPY . .
 
-# Runtime stage (smaller image)
-FROM node:18-alpine
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Copy production deps and app files from the builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app .
-
-USER appuser
-
-# Allow mapping of the exposed port at runtime
+# Expose port
 EXPOSE 3000
 
+# Start the application
 CMD ["node", "app.js"]
